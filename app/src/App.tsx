@@ -1,5 +1,5 @@
-import { Component, onMount, createEffect, Match, createSignal, Switch, For } from 'solid-js';
-import { createStore, produce } from "solid-js/store";
+import { Component, onMount, createEffect, Match, Switch, For, Show } from 'solid-js';
+import { createStore } from "solid-js/store";
 import GIF from '@dhdbstjr98/gif.js'
 
 import styles from './App.module.css';
@@ -13,6 +13,7 @@ interface State {
   intervalId?: number
   interval: number
   delay: number
+  shootingTime: number
   devices: InputDeviceInfo[]
 }
 
@@ -27,7 +28,8 @@ const App: Component = () => {
     intervalId: undefined,
     devices: [],
     interval: 1,
-    delay: 100,
+    shootingTime: 0,
+    delay: 200,
   })
   
   onMount(async () => {
@@ -70,6 +72,11 @@ const App: Component = () => {
         take()
       }, store.interval * 1000)
 
+      if (store.shootingTime > 0) {
+        setTimeout(() => {
+          stopShooting()
+        }, store.shootingTime * 1000)
+      }
       setStore('intervalId', () => intervalId)
       setStore('status', () => 'shooting')
     }, 3000)
@@ -80,6 +87,7 @@ const App: Component = () => {
     setStore('status', () => 'setupgif')
   }
   const generateGIF = () => {
+    setStore('status', () => 'generating')
     const gif = new GIF({
       quality: 10,
     })
@@ -89,17 +97,22 @@ const App: Component = () => {
     gif.render()
     gif.on('finished', (blob: any) => {
       window.open(URL.createObjectURL(blob))
+      setStore('status', () => 'setupgif')
     })
   }
 
   const onChangeInterval = (ev: any) => {
     setStore('interval', () => Number(ev.target.value))
   }
+  const onChangeShootingTime = (ev: any) => {
+    setStore('shootingTime', () => Number(ev.target.value))
+  }
   const onChangeDelay = (ev: any) => {
     setStore('delay', () => Number(ev.target.value))
   }
   const onChangeDevice = async (ev: any) => {
     const deviceId = ev.target.value
+    store.stream?.getTracks().forEach((t) => t.stop())
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         deviceId
@@ -112,7 +125,7 @@ const App: Component = () => {
     <div class={styles.App}>
       <div class={styles.VideoWrapper}>
         <video ref={videoElement} playsinline muted autoplay></video>
-        <div class={styles.CollapseMenuWrapper}>
+        <div class={styles.BottomNav}>
           <Switch>
             <Match when={store.status === 'preparing'}>
               <div class='columns'>
@@ -128,7 +141,7 @@ const App: Component = () => {
                   </div>
                 </div>
                 <div class='column'>
-                  <div class="field is-horizontal">
+                  <div class="field is-vertical">
                     <div class="field-label is-normal">
                       <label class="label">撮影間隔(秒)</label>
                     </div>
@@ -142,25 +155,44 @@ const App: Component = () => {
                   </div>
                 </div>
                 <div class='column'>
+                  <div class="field is-vertical">
+                    <div class="field-label is-normal">
+                      <label class="label">撮影時間(秒・0は無限)</label>
+                    </div>
+                    <div class="field-body">
+                      <div class="field">
+                        <p class="control">
+                          <input class="input is-danger" type="number" onInput={onChangeShootingTime} value={store.shootingTime}/>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class='column pt-2'>
                   <button onClick={shoot} class={styles.ShootingBtn}>Let's shooting!</button>
                 </div>
+              </div>
+            </Match>
+            <Match when={store.status === 'standby'}>
+              <div class='title'>
+                準備中
               </div>
             </Match>
             <Match when={store.status === 'shooting'}>
               <div>
                 <button onClick={stopShooting} class={styles.ShootingBtn}>Stop!!!</button>
               </div>
-              <div>
+              <div class={styles.Gallery + ' pt-2'}>
                 <For each={store.images}>{(im, i) => {
                   return <img src={im} width="100"></img>
                 }}</For>
               </div>
             </Match>
-            <Match when={store.status === 'setupgif'}>
+            <Match when={store.status === 'setupgif' || store.status === 'generating'}>
               <div class='columns'>
                 <div class='column'>
                   <div class="select">
-                    <div class="field is-horizontal">
+                    <div class="field is-vertical">
                       <div class="field-label is-normal">
                         <label class="label">間隔(ミリ秒)</label>
                       </div>
@@ -174,11 +206,19 @@ const App: Component = () => {
                     </div>
                   </div>
                 </div>
-                <div class='column'>
-                  <button onClick={generateGIF} class={styles.ShootingBtn}>Get gif</button>
+                <div class='column pt-2'>
+                  <Show
+                    when={store.status === 'setupgif'}
+                    fallback={() => <progress class="progress is-small is-primary" max="100">15%</progress>}
+                  >
+                    <button
+                      onClick={generateGIF}
+                      class={styles.ShootingBtn}
+                    >Get gif</button>
+                  </Show>
                 </div>
               </div>
-              <div>
+              <div class={styles.Gallery + ' pt-2'}>
                 <For each={store.images}>{(im, i) => {
                   return <img src={im} width="100"></img>
                 }}</For>
