@@ -1,10 +1,10 @@
 import { Component, onMount, createEffect, Match, createSignal, Switch, For } from 'solid-js';
 import { createStore, produce } from "solid-js/store";
-import GIF from 'gif.js'
+import GIF from '@dhdbstjr98/gif.js'
 
 import styles from './App.module.css';
 
-type Status = 'preparing' | 'shooting' | 'setupgif' | 'generating' | 'done'
+type Status = 'preparing' | 'standby' | 'shooting' | 'setupgif' | 'generating' | 'done'
 interface State {
   status: Status
   stream: MediaStream | null
@@ -48,7 +48,7 @@ const App: Component = () => {
   })
 
   const shoot = async () => {
-    setStore('status', () => 'shooting')
+    setStore('status', () => 'standby')
     const take = () => {
       if (videoElement && canvasElement && store.stream) {
         const { width, height } = store.stream.getVideoTracks()[0].getSettings()
@@ -69,7 +69,9 @@ const App: Component = () => {
       const intervalId = setInterval(() => {
         take()
       }, store.interval * 1000)
+
       setStore('intervalId', () => intervalId)
+      setStore('status', () => 'shooting')
     }, 3000)
 
   }
@@ -85,7 +87,7 @@ const App: Component = () => {
       gif.addFrame(img, { delay: store.delay })
     })
     gif.render()
-    gif.on('finished', (blob) => {
+    gif.on('finished', (blob: any) => {
       window.open(URL.createObjectURL(blob))
     })
   }
