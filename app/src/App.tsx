@@ -190,7 +190,7 @@ const App: Component = () => {
             </Match>
             <Match when={store.status === 'setupgif' || store.status === 'generating'}>
               <div class='columns'>
-                <div class='column'>
+                <div class='column mb-3'>
                   <div class="select">
                     <div class="field is-vertical">
                       <div class="field-label is-normal">
@@ -211,10 +211,12 @@ const App: Component = () => {
                     when={store.status === 'setupgif'}
                     fallback={() => <progress class="progress is-small is-primary" max="100">15%</progress>}
                   >
-                    <button
-                      onClick={generateGIF}
-                      class={styles.ShootingBtn}
-                    >Get gif</button>
+                    <div class='pt-2'>
+                      <button
+                        onClick={generateGIF}
+                        class={styles.ShootingBtn}
+                      >Get gif</button>
+                    </div>
                   </Show>
                 </div>
               </div>
